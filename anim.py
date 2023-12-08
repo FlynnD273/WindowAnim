@@ -32,7 +32,7 @@ windows: list[tk.Tk] = []
 avg = 0
 avgcount = 0
 
-prevtime = gettime()
+prevtime = gettime() - 0.01
 while True:
     t = gettime()
     avg += 1 / (t - prevtime)
