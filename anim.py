@@ -2,57 +2,62 @@ import tkinter as tk
 import time
 import math
 
-start_time = time.time_ns()
+class animatedWindow(tk.Tk):
+    def createWindow(self, color: str) -> tk.Toplevel:
+        window = tk.Toplevel(self)
+        window.resizable(False, False)
+        window.attributes('-topmost', 1)
+        window.overrideredirect(True)
+        window.title("")
+        window.configure(bg=color)
+        return window
 
-scrn = tk.Tk()
+    def __init__(self, window_count: int) -> None:
+        self.startcount = window_count
+        super().__init__()
+        self.geometry("0x0")
+        self.start_time = time.time_ns()
+        self.avg = 0
+        self.avgcount = 0
+        self.prevtime = self.start_time - 0.001
+        self.screen_width = self.winfo_screenwidth()
+        self.screen_height = self.winfo_screenheight()
+        self.windows: list[tk.Toplevel] = []
+        for _ in range(self.startcount):
+            self.windows.append(self.createWindow("white"))
 
-screen_width = scrn.winfo_screenwidth()
-screen_height = scrn.winfo_screenheight()
+    def gettime(self) -> float:
+        return (time.time_ns() - self.start_time) / 1000000000
 
-scrn.quit()
-scrn.destroy()
+    def setpos(self, win: tk.Toplevel, x: float, y: float, w: float, h: float):
+        string = "{}x{}+{}+{}".format(int(w), int(h), int(x), int(y))
+        win.geometry(string) 
 
-def createWindow(color: str) -> tk.Tk:
-    window = tk.Tk()
-    window.resizable(False, False)
-    window.attributes('-topmost', 1)
-    window.overrideredirect(True)
-    window.title("")
-    window.configure(bg=color)
-    return window
+    def frame(self):
+        t = self.gettime()
+        self.avg += 1 / (t - self.prevtime)
+        self.avgcount += 1
+        print("\r" + str(round(self.avg / self.avgcount, 2)) + " " * 20, end="")
+        if len(self.windows) - self.startcount < t / 3:
+            self.avg = 0
+            self.avgcount = 0
+            self.windows.append(self.createWindow("white"))
+            print(str(len(self.windows)) + " " * 20)
 
-def gettime() -> float:
-    return (time.time_ns() - start_time) / 1000000000
+        for i, win in enumerate(self.windows):
+            newt = t - i / 1.2
+            w = math.sin(newt * 2 * math.pi * 1) * 50 + 100
+            h = math.cos(newt * 2 * math.pi * 1) * 50 + 100
+            x = math.cos(newt * 2 * math.pi * 0.25) * 800 + self.screen_width / 2 - w / 2
+            y = math.sin(newt * 2 * math.pi * 0.5) * 400 + self.screen_height / 2 - h / 2
+            self.setpos(win, x, y, w, h)
+            win.update()
+        
+        # self.update()
+        self.prevtime = t
 
-def setpos(win: tk.Tk, x: float, y: float, w: float, h: float):
-    string = "{}x{}+{}+{}".format(int(w), int(h), int(x), int(y))
-    win.geometry(string) 
+anim = animatedWindow(10)
 
-windows: list[tk.Tk] = []
-avg = 0
-avgcount = 0
-
-prevtime = gettime() - 0.01
 while True:
-    t = gettime()
-    avg += 1 / (t - prevtime)
-    avgcount += 1
-    print("\r" + str(round(avg / avgcount, 2)) + " " * 20, end="")
-    if len(windows) < t / 3:
-        avg = 0
-        avgcount = 0
-        windows.append(createWindow("white"))
-        print(str(len(windows)) + " " * 20)
-
-    for i, win in enumerate(windows):
-        newt = t - i / 1.2
-        w = math.sin(newt * 2 * math.pi * 1) * 50 + 100
-        h = math.cos(newt * 2 * math.pi * 1) * 50 + 100
-        x = math.cos(newt * 2 * math.pi * 0.25) * 800 + screen_width / 2 - w / 2
-        y = math.sin(newt * 2 * math.pi * 0.5) * 400 + screen_height / 2 - h / 2
-        setpos(win, x, y, w, h)
-        win.update_idletasks()
-        win.update()
-
+    anim.frame()
     time.sleep(0.01)
-    prevtime = t
